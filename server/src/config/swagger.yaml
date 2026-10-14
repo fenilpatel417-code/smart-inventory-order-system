@@ -1,0 +1,156 @@
+openapi: 3.0.0
+info:
+  title: Smart Inventory and Order Management System API
+  version: 1.0.0
+  description: Complete RESTful API for small businesses, retail shops, and wholesalers. Features inventory management, supplier purchasing, customer order processing with atomic stock safeguards, low-stock alerts, cron jobs, and financial analytics.
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Local Development Server
+paths:
+  /auth/login:
+    post:
+      summary: User authentication
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  example: admin@smartinventory.com
+                password:
+                  type: string
+                  example: Admin123!
+      responses:
+        200:
+          description: Login successful with access token and httpOnly refresh cookie
+  /auth/me:
+    get:
+      summary: Get current authenticated user profile
+      tags: [Auth]
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: User profile details
+  /products:
+    get:
+      summary: List inventory products with search, category/supplier/stock filters, sorting and pagination
+      tags: [Products]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: stockStatus
+          schema:
+            type: string
+            enum: [in_stock, low_stock, out_of_stock]
+      responses:
+        200:
+          description: Paginated product list
+    post:
+      summary: Create new product in catalog
+      tags: [Products]
+      security:
+        - BearerAuth: []
+      responses:
+        201:
+          description: Product created
+  /products/{id}/adjust-stock:
+    post:
+      summary: Manually adjust product stock with audit movement logging
+      tags: [Products]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Stock adjusted
+  /orders:
+    get:
+      summary: List customer orders with filters
+      tags: [Orders]
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: Paginated orders
+    post:
+      summary: Create sales order with multiple line items
+      tags: [Orders]
+      security:
+        - BearerAuth: []
+      responses:
+        201:
+          description: Order created in pending status
+  /orders/{id}/status:
+    put:
+      summary: Update order status (triggers atomic stock deduction on confirm, restoration on cancel)
+      tags: [Orders]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Order status updated
+  /orders/{id}/invoice:
+    get:
+      summary: Download formatted PDF invoice
+      tags: [Orders]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: PDF stream
+  /dashboard/kpis:
+    get:
+      summary: Retrieve operational and executive financial KPIs
+      tags: [Dashboard]
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: Dashboard metrics
+  /reports/sales:
+    get:
+      summary: Executive sales report with date range aggregation and CSV/PDF export
+      tags: [Reports]
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: Sales report data or file download
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
